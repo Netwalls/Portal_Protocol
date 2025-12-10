@@ -27,9 +27,9 @@ export default function Layout(): JSX.Element {
   const [backendUrl, setBackendUrl] = useState(
     import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'
   );
-  const [portalAddress, setPortalAddress] = useState('0x5FbDB2315678afecb367f032d93F642f64180aa3');
+  const [portalAddress, setPortalAddress] = useState('0x09d008E00f62605dA8Ffa64BAf7A2f08082FcE19');
   const [account, setAccount] = useState<string | null>(null);
-  const [chainName, setChainName] = useState('Anvil');
+  const [chainName, setChainName] = useState('Base Sepolia');
   const portalAddressInputRef = useRef<HTMLInputElement>(null);
   const backendUrlInputRef = useRef<HTMLInputElement>(null);
   const connectBtnRef = useRef<HTMLButtonElement>(null);
