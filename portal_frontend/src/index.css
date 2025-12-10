@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Optional: small body tweaks to match original visuals */
+html, body, #root { height: 100%; }
+body { @apply bg-neutral-950 text-neutral-100 font-[Inter]; }

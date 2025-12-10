@@ -1,0 +1,1181 @@
+<html lang="en"><head>
+    <meta charset="utf-8">
+    <title>Portal — Intent-based DEX Hook</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Ethers v5 -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <!-- Lucide icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+  </head>
+  <body class="min-h-screen bg-neutral-950 text-neutral-100 antialiased font-[Inter] relative overflow-x-hidden">
+    <!-- Background FX -->
+    <div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10">
+      <div class="absolute inset-0 bg-[radial-gradient(1200px_600px_at_20%_10%,rgba(120,119,198,0.12),transparent_50%),radial-gradient(1000px_500px_at_85%_30%,rgba(56,189,248,0.10),transparent_45%)]"></div>
+      <div class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:24px_24px] opacity-20"></div>
+      <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30"></div>
+    </div>
+
+    <!-- App Container -->
+    <div id="app" class="flex min-h-screen">
+      <!-- Sidebar -->
+      <aside class="hidden lg:flex w-72 flex-col border-r border-neutral-800/80 bg-neutral-950/80 ring-1 ring-white/5">
+        <div class="px-6 py-5 flex items-center gap-3">
+          <div class="h-9 w-9 rounded-md bg-gradient-to-br from-neutral-900 to-neutral-800 border border-neutral-800 flex items-center justify-center shadow-sm shadow-black/20">
+            <span class="text-neutral-200 font-semibold tracking-tight text-lg">P</span>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-neutral-100 font-semibold tracking-tight text-[18px]">PORTAL</span>
+            <span class="text-neutral-400 text-xs">Intent Hook Console</span>
+          </div>
+        </div>
+        <div class="px-3 py-2">
+          <nav class="space-y-1">
+            <button data-nav="dashboard" class="nav-btn w-full flex items-center gap-3 px-3 py-2 rounded-md text-neutral-300 hover:text-neutral-100 hover:bg-neutral-900 transition-all outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-700 border border-transparent">
+              <i data-lucide="layout-dashboard" class="h-4 w-4"></i>
+              <span class="text-sm">Dashboard</span>
+            </button>
+            <button data-nav="commit" class="nav-btn w-full flex items-center gap-3 px-3 py-2 rounded-md text-neutral-300 hover:text-neutral-100 hover:bg-neutral-900 transition-all outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-700 border border-transparent">
+              <i data-lucide="lock" class="h-4 w-4"></i>
+              <span class="text-sm">Commit Intent</span>
+            </button>
+            <button data-nav="intents" class="nav-btn w-full flex items-center gap-3 px-3 py-2 rounded-md text-neutral-300 hover:text-neutral-100 hover:bg-neutral-900 transition-all outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-700 border border-transparent">
+              <i data-lucide="list" class="h-4 w-4"></i>
+              <span class="text-sm">Intents</span>
+            </button>
+            <button data-nav="rewards" class="nav-btn w-full flex items-center gap-3 px-3 py-2 rounded-md text-neutral-300 hover:text-neutral-100 hover:bg-neutral-900 transition-all outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-700 border border-transparent">
+              <i data-lucide="wallet" class="h-4 w-4"></i>
+              <span class="text-sm">Rewards</span>
+            </button>
+            <button data-nav="solver" class="nav-btn w-full flex items-center gap-3 px-3 py-2 rounded-md text-neutral-300 hover:text-neutral-100 hover:bg-neutral-900 transition-all outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-700 border border-transparent">
+              <i data-lucide="cpu" class="h-4 w-4"></i>
+              <span class="text-sm">Solver</span>
+            </button>
+            <button data-nav="settings" class="nav-btn w-full flex items-center gap-3 px-3 py-2 rounded-md text-neutral-300 hover:text-neutral-100 hover:bg-neutral-900 transition-all outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-700 border border-transparent">
+              <i data-lucide="settings" class="h-4 w-4"></i>
+              <span class="text-sm">Settings</span>
+            </button>
+          </nav>
+        </div>
+        <div class="mt-auto px-6 py-5 border-t border-neutral-800/80">
+          <div class="text-xs text-neutral-500">v0.1 • Experimental</div>
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <main class="flex-1 flex flex-col">
+        <!-- Top bar -->
+        <header class="flex items-center justify-between gap-3 px-4 lg:px-6 py-4 border-b border-neutral-800/80 bg-neutral-950/60 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/40">
+          <div class="flex items-center gap-2 lg:hidden">
+            <div class="h-8 w-8 rounded-md bg-gradient-to-br from-neutral-900 to-neutral-800 border border-neutral-800 flex items-center justify-center shadow-sm shadow-black/20">
+              <span class="text-neutral-200 font-semibold tracking-tight text-base">P</span>
+            </div>
+            <span class="text-neutral-200 font-semibold tracking-tight text-[17px]">PORTAL</span>
+          </div>
+          <div class="hidden md:flex items-center gap-3 w-full max-w-3xl">
+            <div class="flex-1 grid grid-cols-2 gap-3">
+              <div class="relative">
+                <label class="block text-xs text-neutral-400 mb-1">Portal Hook Address</label>
+                <input id="portalAddress" type="text" placeholder="0x..." class="w-full rounded-md bg-neutral-900/70 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none focus:ring-2 focus:ring-neutral-600 focus:border-neutral-600 transition">
+              </div>
+              <div class="relative">
+                <label class="block text-xs text-neutral-400 mb-1">Backend URL</label>
+                <input id="backendUrl" type="text" placeholder="http://localhost:3001" class="w-full rounded-md bg-neutral-900/70 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none focus:ring-2 focus:ring-neutral-600 focus:border-neutral-600 transition">
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 ml-auto">
+            <div id="chainBadge" class="hidden md:flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/60 ring-1 ring-white/5 px-3 py-2">
+              <i data-lucide="network" class="h-4 w-4"></i>
+              <span id="chainName" class="text-sm text-neutral-300">-</span>
+            </div>
+            <button id="connectBtn" class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/60 hover:bg-neutral-900 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2 text-sm text-neutral-200 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-700">
+              <i data-lucide="log-in" class="h-4 w-4"></i>
+              <span>Connect</span>
+            </button>
+            <div id="accountPill" class="hidden items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/60 ring-1 ring-white/5 px-3 py-2">
+              <div class="h-2.5 w-2.5 rounded-full bg-emerald-500/90"></div>
+              <span id="accountAddr" class="text-sm text-neutral-200">-</span>
+              <button id="copyAddr" class="ml-1 text-neutral-400 hover:text-neutral-200 transition" title="Copy address">
+                <i data-lucide="copy" class="h-4 w-4"></i>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <!-- Content -->
+        <section id="content" class="flex-1 p-4 lg:p-6">
+          <!-- Dashboard -->
+          <div data-view="dashboard" class="view space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div class="col-span-1 lg:col-span-2 rounded-xl border border-neutral-800/80 bg-neutral-900/40 ring-1 ring-white/5 shadow-sm shadow-black/20">
+                <div class="p-5 border-b border-neutral-800/80">
+                  <div class="flex items-center justify-between">
+                    <h2 class="text-lg md:text-[20px] tracking-tight font-semibold text-neutral-100">Overview</h2>
+                    <button data-open-commit="" class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2 text-sm text-neutral-200 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-700">
+                      <i data-lucide="plus" class="h-4 w-4"></i>
+                      New Commit
+                    </button>
+                  </div>
+                </div>
+                <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div class="rounded-lg border border-neutral-800 bg-neutral-950/30 p-4 ring-1 ring-white/5">
+                    <div class="text-neutral-400 text-xs mb-1">Connected</div>
+                    <div id="overviewConnected" class="text-neutral-200 text-base">No</div>
+                  </div>
+                  <div class="rounded-lg border border-neutral-800 bg-neutral-950/30 p-4 ring-1 ring-white/5">
+                    <div class="text-neutral-400 text-xs mb-1">Pending Rewards</div>
+                    <div id="overviewRewards" class="text-neutral-200 text-base">-</div>
+                  </div>
+                  <div class="rounded-lg border border-neutral-800 bg-neutral-950/30 p-4 ring-1 ring-white/5">
+                    <div class="text-neutral-400 text-xs mb-1">Open Intents</div>
+                    <div id="overviewOpenIntents" class="text-neutral-200 text-base">0</div>
+                  </div>
+                </div>
+              </div>
+              <div class="rounded-xl border border-neutral-800/80 bg-neutral-900/40 ring-1 ring-white/5 shadow-sm shadow-black/20">
+                <div class="p-5 border-b border-neutral-800/80">
+                  <h2 class="text-lg md:text-[20px] tracking-tight font-semibold text-neutral-100">Quick Actions</h2>
+                </div>
+                <div class="p-5 space-y-3">
+                  <button data-open-commit="" class="w-full inline-flex items-center justify-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2.5 text-sm text-neutral-200 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-700">
+                    <i data-lucide="lock" class="h-4 w-4"></i>
+                    Commit Intent
+                  </button>
+                  <button data-nav="intents" class="w-full inline-flex items-center justify-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2.5 text-sm text-neutral-200 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-700">
+                    <i data-lucide="list" class="h-4 w-4"></i>
+                    View Intents
+                  </button>
+                  <button data-nav="rewards" class="w-full inline-flex items-center justify-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2.5 text-sm text-neutral-200 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-700">
+                    <i data-lucide="wallet" class="h-4 w-4"></i>
+                    Rewards &amp; Claim
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="rounded-xl border border-neutral-800/80 bg-neutral-900/40 ring-1 ring-white/5 shadow-sm shadow-black/20">
+              <div class="p-5 border-b border-neutral-800/80">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-lg tracking-tight font-semibold text-neutral-100">Recent Intents</h3>
+                  <div class="flex items-center gap-2">
+                    <button id="refreshIntents" class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2 text-sm text-neutral-200 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-700">
+                      <i data-lucide="refresh-ccw" class="h-4 w-4"></i>
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div id="recentIntents" class="p-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <!-- Cards injected here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Commit View -->
+          <div data-view="commit" class="view hidden space-y-6">
+            <div class="rounded-xl border border-neutral-800/80 bg-neutral-900/40 ring-1 ring-white/5 shadow-sm shadow-black/20 overflow-hidden">
+              <div class="p-5 border-b border-neutral-800/80">
+                <h2 class="text-[20px] tracking-tight font-semibold text-neutral-100">Commit Intent</h2>
+                <p class="text-neutral-400 text-sm mt-1">Generate and submit a commitment. Keep the secret private.</p>
+              </div>
+              <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs text-neutral-400 mb-1">Token In (address)</label>
+                      <input id="tokenIn" type="text" placeholder="0x..." class="w-full rounded-md bg-neutral-900/70 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none focus:ring-2 focus:ring-neutral-600 focus:border-neutral-600 transition">
+                    </div>
+                    <div>
+                      <label class="block text-xs text-neutral-400 mb-1">Token Out (address)</label>
+                      <input id="tokenOut" type="text" placeholder="0x..." class="w-full rounded-md bg-neutral-900/70 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none focus:ring-2 focus:ring-neutral-600 focus:border-neutral-600 transition">
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs text-neutral-400 mb-1">Amount In (wei)</label>
+                      <input id="amountIn" type="text" placeholder="e.g. 1000000000000000000" class="w-full rounded-md bg-neutral-900/70 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none focus:ring-2 focus:ring-neutral-600 focus:border-neutral-600 transition">
+                    </div>
+                    <div>
+                      <label class="block text-xs text-neutral-400 mb-1">Min Amount Out (wei)</label>
+                      <input id="minAmountOut" type="text" placeholder="e.g. 990000000000000000" class="w-full rounded-md bg-neutral-900/70 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none focus:ring-2 focus:ring-neutral-600 focus:border-neutral-600 transition">
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs text-neutral-400 mb-1">Secret (bytes32)</label>
+                    <div class="flex gap-2">
+                      <input id="secret" type="text" placeholder="0x..." class="flex-1 rounded-md bg-neutral-900/70 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none focus:ring-2 focus:ring-neutral-600 focus:border-neutral-600 transition">
+                      <button id="genSecret" class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2 text-sm text-neutral-200">
+                        <i data-lucide="wand-2" class="h-4 w-4"></i>
+                        Generate
+                      </button>
+                    </div>
+                    <p class="text-[11px] text-neutral-500 mt-1">Stored locally only. Do not share.</p>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs text-neutral-400 mb-1">Deadline in minutes</label>
+                      <input id="deadlineMins" type="number" min="1" step="1" value="20" class="w-full rounded-md bg-neutral-900/70 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 outline-none focus:ring-2 focus:ring-neutral-600 focus:border-neutral-600 transition">
+                    </div>
+                    <div>
+                      <label class="block text-xs text-neutral-400 mb-1">Dest Token (optional)</label>
+                      <input id="destToken" type="text" placeholder="0x... or empty" class="w-full rounded-md bg-neutral-900/70 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none focus:ring-2 focus:ring-neutral-600 focus:border-neutral-600 transition">
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs text-neutral-400 mb-1">Dest Chain ID (optional)</label>
+                      <input id="destChainId" type="text" placeholder="e.g. 10" class="w-full rounded-md bg-neutral-900/70 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none focus:ring-2 focus:ring-neutral-600 focus:border-neutral-600 transition">
+                    </div>
+                    <div>
+                      <label class="block text-xs text-neutral-400 mb-1">Dest Recipient (optional)</label>
+                      <input id="destRecipient" type="text" placeholder="0x... or empty" class="w-full rounded-md bg-neutral-900/70 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none focus:ring-2 focus:ring-neutral-600 focus:border-neutral-600 transition">
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                      <div class="relative inline-flex items-center">
+                        <input id="useRelayer" type="checkbox" class="peer hidden">
+                        <label for="useRelayer" class="w-11 h-6 bg-neutral-800 rounded-full cursor-pointer relative transition before:content-[''] before:absolute before:h-5 before:w-5 before:bg-neutral-400 before:rounded-full before:top-0.5 before:left-0.5 before:transition peer-checked:bg-neutral-600 peer-checked:before:left-[22px]"></label>
+                      </div>
+                      <span class="text-sm text-neutral-300">Use backend relayer</span>
+                    </div>
+                    <button id="computeCommit" class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2 text-sm text-neutral-200 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-700">
+                      <i data-lucide="calculator" class="h-4 w-4"></i>
+                      Compute
+                    </button>
+                  </div>
+                </div>
+
+                <div class="space-y-4">
+                  <div class="rounded-lg border border-neutral-800 bg-neutral-950/30 p-4 ring-1 ring-white/5">
+                    <div class="text-neutral-400 text-xs mb-2">Commitment</div>
+                    <div id="commitmentOut" class="break-all text-sm text-neutral-100">-</div>
+                  </div>
+
+                  <div class="rounded-lg border border-neutral-800 bg-neutral-950/30 p-4 ring-1 ring-white/5">
+                    <div class="text-neutral-400 text-xs mb-2">Intent Type</div>
+                    <div id="intentTypeOut" class="text-sm text-neutral-100">SameChain</div>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <button id="submitWallet" class="inline-flex items-center justify-center gap-2 rounded-md border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2.5 text-sm text-neutral-200 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-700">
+                      <i data-lucide="send" class="h-4 w-4"></i>
+                      Submit via Wallet
+                    </button>
+                    <button id="submitBackend" class="inline-flex items-center justify-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2.5 text-sm text-neutral-200 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-neutral-700">
+                      <i data-lucide="server" class="h-4 w-4"></i>
+                      Submit via Backend
+                    </button>
+                  </div>
+
+                  <div class="rounded-lg border border-neutral-800 bg-neutral-950/30 p-4 ring-1 ring-white/5">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <div class="text-neutral-400 text-xs mb-1">Transaction</div>
+                        <div id="txHashOut" class="text-sm text-neutral-100 break-all">-</div>
+                      </div>
+                      <button id="viewOnExplorer" class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2 text-xs text-neutral-200">
+                        <i data-lucide="external-link" class="h-4 w-4"></i>
+                        View
+                      </button>
+                    </div>
+                    <div class="mt-3">
+                      <div class="text-neutral-400 text-xs mb-1">Intent Hash</div>
+                      <div id="intentHashOut" class="text-sm text-neutral-100 break-all">-</div>
+                    </div>
+                  </div>
+
+                  <div class="text-[11px] text-neutral-500">
+                    Tips:
+                    <ul class="list-disc pl-4 mt-1 space-y-1">
+                      <li>Save the secret locally; it is required for settlement reveal.</li>
+                      <li>When using the backend, it will respond with tx hash and intentHash (recommended).</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Intents View -->
+          <div data-view="intents" class="view hidden space-y-6">
+            <div class="rounded-xl border border-neutral-800/80 bg-neutral-900/40 ring-1 ring-white/5 shadow-sm shadow-black/20 overflow-hidden">
+              <div class="p-5 border-b border-neutral-800/80 flex items-center justify-between">
+                <div>
+                  <h2 class="text-[20px] tracking-tight font-semibold text-neutral-100">Your Intents</h2>
+                  <p class="text-neutral-400 text-sm mt-1">Tracked locally and enriched from backend/contract.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button id="importIntent" class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2 text-sm text-neutral-200">
+                    <i data-lucide="download" class="h-4 w-4"></i>
+                    Import by Hash
+                  </button>
+                  <button id="clearIntents" class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2 text-sm text-neutral-200">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <div id="intentList" class="p-5 divide-y divide-neutral-800">
+                <!-- Rows injected -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Rewards View -->
+          <div data-view="rewards" class="view hidden space-y-6">
+            <div class="rounded-xl border border-neutral-800/80 bg-neutral-900/40 ring-1 ring-white/5 shadow-sm shadow-black/20 overflow-hidden">
+              <div class="p-5 border-b border-neutral-800/80">
+                <h2 class="text-[20px] tracking-tight font-semibold text-neutral-100">Rewards &amp; Claim</h2>
+                <p class="text-neutral-400 text-sm mt-1">Pull pending rewards from contract or backend and claim.</p>
+              </div>
+              <div class="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="rounded-lg border border-neutral-800 bg-neutral-950/30 p-4 ring-1 ring-white/5">
+                  <div class="text-neutral-400 text-xs mb-1">Pending Rewards (contract)</div>
+                  <div id="rewardsAmount" class="text-neutral-100 text-base">-</div>
+                </div>
+                <div class="rounded-lg border border-neutral-800 bg-neutral-950/30 p-4 ring-1 ring-white/5">
+                  <div class="text-neutral-400 text-xs mb-1">Pending Rewards (backend)</div>
+                  <div id="rewardsAmountBackend" class="text-neutral-100 text-base">-</div>
+                </div>
+                <div class="rounded-lg border border-neutral-800 bg-neutral-950/30 p-4 ring-1 ring-white/5">
+                  <div class="text-neutral-400 text-xs mb-1">Last Claim</div>
+                  <div id="lastClaim" class="text-neutral-100 text-base">-</div>
+                </div>
+              </div>
+              <div class="px-5 pb-5">
+                <div class="flex items-center gap-3">
+                  <button id="refreshRewards" class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2 text-sm text-neutral-200">
+                    <i data-lucide="refresh-ccw" class="h-4 w-4"></i>
+                    Refresh
+                  </button>
+                  <button id="claimRewards" class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2 text-sm text-neutral-200">
+                    <i data-lucide="wallet" class="h-4 w-4"></i>
+                    Claim via Wallet
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Solver View -->
+          <div data-view="solver" class="view hidden space-y-6">
+            <div class="rounded-xl border border-neutral-800/80 bg-neutral-900/40 ring-1 ring-white/5 shadow-sm shadow-black/20 overflow-hidden">
+              <div class="p-5 border-b border-neutral-800/80">
+                <h2 class="text-[20px] tracking-tight font-semibold text-neutral-100">Solver Dashboard</h2>
+                <p class="text-neutral-400 text-sm mt-1">Register as solver and manage settlements from your infra.</p>
+              </div>
+              <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-3 rounded-lg border border-neutral-800 bg-neutral-950/30 p-4 ring-1 ring-white/5">
+                  <div class="text-neutral-300 font-medium">Register Solver</div>
+                  <label class="block text-xs text-neutral-400 mb-1">Stake (ETH)</label>
+                  <input id="solverStake" type="text" placeholder="e.g. 1.0" class="w-full rounded-md bg-neutral-900/70 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none focus:ring-2 focus:ring-neutral-600 focus:border-neutral-600 transition">
+                  <div class="flex items-center gap-2">
+                    <button id="registerSolver" class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2 text-sm text-neutral-200">
+                      <i data-lucide="shield" class="h-4 w-4"></i>
+                      Register via Wallet
+                    </button>
+                    <button id="registerSolverBackend" class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2 text-sm text-neutral-200">
+                      <i data-lucide="server-cog" class="h-4 w-4"></i>
+                      Register via Backend
+                    </button>
+                  </div>
+                  <div id="solverTx" class="text-xs text-neutral-400 mt-1">-</div>
+                </div>
+
+                <div class="space-y-3 rounded-lg border border-neutral-800 bg-neutral-950/30 p-4 ring-1 ring-white/5">
+                  <div class="text-neutral-300 font-medium">Manual Tools</div>
+                  <label class="block text-xs text-neutral-400 mb-1">Fetch Intent Status (by intentHash)</label>
+                  <div class="flex gap-2">
+                    <input id="queryIntentHash" type="text" placeholder="0x..." class="flex-1 rounded-md bg-neutral-900/70 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none focus:ring-2 focus:ring-neutral-600 focus:border-neutral-600 transition">
+                    <button id="fetchIntentStatus" class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2 text-sm text-neutral-200">
+                      <i data-lucide="search" class="h-4 w-4"></i>
+                      Fetch
+                    </button>
+                  </div>
+                  <pre id="manualStatus" class="text-xs text-neutral-300 bg-neutral-900/50 border border-neutral-800 rounded-md p-3 ring-1 ring-white/5">-</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settings View -->
+          <div data-view="settings" class="view hidden space-y-6">
+            <div class="rounded-xl border border-neutral-800/80 bg-neutral-900/40 ring-1 ring-white/5 shadow-sm shadow-black/20 overflow-hidden">
+              <div class="p-5 border-b border-neutral-800/80">
+                <h2 class="text-[20px] tracking-tight font-semibold text-neutral-100">Settings</h2>
+              </div>
+              <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                  <label class="block text-xs text-neutral-400 mb-1">Explorer Base URL</label>
+                  <input id="explorerUrl" type="text" placeholder="https://etherscan.io" class="w-full rounded-md bg-neutral-900/70 border border-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 outline-none focus:ring-2 focus:ring-neutral-600 focus:border-neutral-600 transition">
+                </div>
+                <div class="space-y-2">
+                  <label class="block text-xs text-neutral-400 mb-1">SSE/WebSocket (future)</label>
+                  <input disabled="" type="text" placeholder="wss://..." class="w-full rounded-md bg-neutral-900/30 border border-neutral-800 px-3 py-2 text-sm text-neutral-500 outline-none">
+                </div>
+              </div>
+              <div class="px-5 pb-5">
+                <button id="saveSettings" class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 ring-1 ring-white/5 hover:-translate-y-0.5 transition-all px-3 py-2 text-sm text-neutral-200">
+                  <i data-lucide="save" class="h-4 w-4"></i>
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Toasts -->
+        <div id="toasts" class="fixed bottom-4 right-4 space-y-2 z-50"></div>
+      </main>
+    </div>
+
+    <script>
+      // Icons
+      document.addEventListener('DOMContentLoaded', () => {
+        lucide.createIcons({ attrs: { 'stroke-width': 1.5 } });
+      });
+
+      // Minimal ABI for required functions/events (approximate based on spec)
+      const PORTAL_ABI = [
+        "function commitIntent(bytes32 commitment, uint40 deadline) payable",
+        "function commitCrossChain(bytes32 commitment, uint40 deadline, uint256 destChainId, address destRecipient) payable",
+        "event IntentCommitted(bytes32 indexed intentHash, address indexed user, bytes32 commitment, uint8 intentType, uint40 deadline, uint32 nonce, uint256 destChainId, address destRecipient)",
+        "function getIntentStatus(bytes32 intentHash) view returns (address user, uint8 intentType, uint8 status, uint256 destChainId, uint40 deadline)",
+        "function pendingRewards(address) view returns (uint256)",
+        "function claimRewards()",
+        "function registerSolver() payable"
+      ];
+
+      // State
+      let provider = null;
+      let signer = null;
+      let account = null;
+      let chainId = null;
+      let iface = new ethers.utils.Interface(PORTAL_ABI);
+
+      // Elements
+      const connectBtn = document.getElementById('connectBtn');
+      const accountPill = document.getElementById('accountPill');
+      const accountAddr = document.getElementById('accountAddr');
+      const copyAddr = document.getElementById('copyAddr');
+      const chainBadge = document.getElementById('chainBadge');
+      const chainName = document.getElementById('chainName');
+
+      const portalAddress = document.getElementById('portalAddress');
+      const backendUrl = document.getElementById('backendUrl');
+      const explorerUrl = document.getElementById('explorerUrl');
+
+      const overviewConnected = document.getElementById('overviewConnected');
+      const overviewRewards = document.getElementById('overviewRewards');
+      const overviewOpenIntents = document.getElementById('overviewOpenIntents');
+
+      const views = document.querySelectorAll('.view');
+      const navBtns = document.querySelectorAll('.nav-btn');
+      const openCommitBtns = document.querySelectorAll('[data-open-commit]');
+
+      const tokenIn = document.getElementById('tokenIn');
+      const tokenOut = document.getElementById('tokenOut');
+      const amountIn = document.getElementById('amountIn');
+      const minAmountOut = document.getElementById('minAmountOut');
+      const secretInput = document.getElementById('secret');
+      const genSecretBtn = document.getElementById('genSecret');
+      const deadlineMins = document.getElementById('deadlineMins');
+      const destToken = document.getElementById('destToken');
+      const destChainId = document.getElementById('destChainId');
+      const destRecipient = document.getElementById('destRecipient');
+      const useRelayer = document.getElementById('useRelayer');
+      const computeCommit = document.getElementById('computeCommit');
+      const commitmentOut = document.getElementById('commitmentOut');
+      const intentTypeOut = document.getElementById('intentTypeOut');
+      const submitWallet = document.getElementById('submitWallet');
+      const submitBackend = document.getElementById('submitBackend');
+      const txHashOut = document.getElementById('txHashOut');
+      const viewOnExplorer = document.getElementById('viewOnExplorer');
+      const intentHashOut = document.getElementById('intentHashOut');
+
+      const refreshIntents = document.getElementById('refreshIntents');
+      const recentIntents = document.getElementById('recentIntents');
+
+      const importIntent = document.getElementById('importIntent');
+      const clearIntents = document.getElementById('clearIntents');
+      const intentList = document.getElementById('intentList');
+
+      const rewardsAmount = document.getElementById('rewardsAmount');
+      const rewardsAmountBackend = document.getElementById('rewardsAmountBackend');
+      const lastClaim = document.getElementById('lastClaim');
+      const refreshRewards = document.getElementById('refreshRewards');
+      const claimRewardsBtn = document.getElementById('claimRewards');
+
+      const solverStake = document.getElementById('solverStake');
+      const registerSolver = document.getElementById('registerSolver');
+      const registerSolverBackend = document.getElementById('registerSolverBackend');
+      const solverTx = document.getElementById('solverTx');
+
+      const queryIntentHash = document.getElementById('queryIntentHash');
+      const fetchIntentStatus = document.getElementById('fetchIntentStatus');
+      const manualStatus = document.getElementById('manualStatus');
+
+      const saveSettings = document.getElementById('saveSettings');
+
+      // Local storage keys
+      const LS_KEYS = {
+        portal: 'portalHookAddress',
+        backend: 'portalBackendUrl',
+        explorer: 'explorerBaseUrl',
+        intents: 'portalIntents',
+        secrets: 'portalSecrets'
+      };
+
+      // Helpers
+      function shortAddr(addr) {
+        if (!addr) return '-';
+        return addr.slice(0, 6) + '…' + addr.slice(-4);
+      }
+
+      function showToast(message, type = 'info') {
+        const id = 't' + Date.now();
+        const wrap = document.getElementById('toasts');
+        const color = type === 'error' ? 'text-red-300 border-red-800 bg-red-950/50' :
+                      type === 'success' ? 'text-emerald-300 border-emerald-800 bg-emerald-950/50' :
+                      'text-neutral-200 border-neutral-800 bg-neutral-900/70';
+        const el = document.createElement('div');
+        el.id = id;
+        el.className = `rounded-md border px-3 py-2 text-sm ${color} shadow-lg ring-1 ring-white/5`;
+        el.textContent = message;
+        wrap.appendChild(el);
+        setTimeout(() => {
+          el.style.opacity = '0';
+          el.style.transition = 'opacity 200ms ease';
+          setTimeout(() => el.remove(), 220);
+        }, 4000);
+      }
+
+      function getContract() {
+        const addr = portalAddress.value.trim();
+        if (!ethers.utils.isAddress(addr)) {
+          throw new Error('Invalid Portal Hook address');
+        }
+        if (!signer) throw new Error('Wallet not connected');
+        return new ethers.Contract(addr, PORTAL_ABI, signer);
+      }
+
+      function getBackend() {
+        const url = backendUrl.value.trim();
+        if (!url) throw new Error('Backend URL not set');
+        return url.replace(/\/$/, '');
+      }
+
+      function loadLS() {
+        portalAddress.value = localStorage.getItem(LS_KEYS.portal) || '';
+        backendUrl.value = localStorage.getItem(LS_KEYS.backend) || 'http://localhost:3001';
+        explorerUrl.value = localStorage.getItem(LS_KEYS.explorer) || 'https://etherscan.io';
+      }
+
+      function saveLS() {
+        localStorage.setItem(LS_KEYS.portal, portalAddress.value.trim());
+        localStorage.setItem(LS_KEYS.backend, backendUrl.value.trim());
+        localStorage.setItem(LS_KEYS.explorer, explorerUrl.value.trim());
+      }
+
+      function getIntentsLS() {
+        try { return JSON.parse(localStorage.getItem(LS_KEYS.intents) || '[]'); } catch { return []; }
+      }
+
+      function setIntentsLS(arr) {
+        localStorage.setItem(LS_KEYS.intents, JSON.stringify(arr));
+        updateOverviewCounts();
+      }
+
+      function getSecretsLS() {
+        try { return JSON.parse(localStorage.getItem(LS_KEYS.secrets) || '{}'); } catch { return {}; }
+      }
+
+      function setSecretsLS(obj) {
+        localStorage.setItem(LS_KEYS.secrets, JSON.stringify(obj));
+      }
+
+      function pushIntentLocal(intent) {
+        const list = getIntentsLS();
+        list.unshift({ ...intent, createdAt: Date.now() });
+        setIntentsLS(list.slice(0, 100));
+        renderIntents();
+      }
+
+      function updateOverviewCounts() {
+        const list = getIntentsLS();
+        overviewOpenIntents.textContent = String(list.filter(x => x.status === 'Open' || x.status === undefined).length);
+      }
+
+      function mapStatus(code) {
+        if (code === 0 || code === '0') return 'Open';
+        if (code === 1 || code === '1') return 'Settled';
+        if (code === 2 || code === '2') return 'Expired';
+        return String(code);
+      }
+
+      function nowPlusMins(mins) {
+        return Math.floor(Date.now() / 1000) + Math.round(Number(mins) * 60);
+      }
+
+      function isCrossChain() {
+        return destChainId.value.trim() !== '' || destRecipient.value.trim() !== '';
+      }
+
+      function computeCommitment() {
+        const ti = tokenIn.value.trim();
+        const to = tokenOut.value.trim();
+        const amtIn = amountIn.value.trim();
+        const minOut = minAmountOut.value.trim();
+        const secret = secretInput.value.trim();
+        const dTok = destToken.value.trim();
+
+        if (!ethers.utils.isAddress(ti) || !ethers.utils.isAddress(to)) throw new Error('Invalid token addresses');
+        if (!ethers.utils.isHexString(secret, 32)) throw new Error('Secret must be 32-byte hex (0x...)');
+        if (!amtIn || !minOut) throw new Error('Amounts required');
+
+        const encoded = ethers.utils.defaultAbiCoder.encode(
+          ['address','address','uint256','uint256','bytes32','address'],
+          [ti, to, ethers.BigNumber.from(amtIn), ethers.BigNumber.from(minOut), secret, dTok && ethers.utils.isAddress(dTok) ? dTok : ethers.constants.AddressZero]
+        );
+        const commitment = ethers.utils.keccak256(encoded);
+        return { commitment, encoded };
+      }
+
+      function renderIntents() {
+        const list = getIntentsLS();
+        recentIntents.innerHTML = '';
+
+        if (list.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'col-span-full';
+          empty.innerHTML = `
+            <div class="rounded-lg border border-neutral-800 bg-neutral-950/30 p-8 ring-1 ring-white/5 flex flex-col items-center justify-center text-center">
+              <i data-lucide="inbox" class="h-5 w-5 text-neutral-500 mb-2"></i>
+              <div class="text-sm text-neutral-300">No intents yet</div>
+              <div class="text-xs text-neutral-500 mt-1">Create your first commit from the Dashboard or Commit view.</div>
+            </div>
+          `;
+          recentIntents.appendChild(empty);
+        } else {
+          list.slice(0, 6).forEach((it) => {
+            const card = document.createElement('div');
+            card.className = 'rounded-lg border border-neutral-800 bg-neutral-950/30 p-4 ring-1 ring-white/5 space-y-2 hover:border-neutral-700/80 transition-colors';
+            const ih = it.intentHash ? it.intentHash : 'Pending…';
+            card.innerHTML = `
+              <div class="flex items-center justify-between">
+                <div class="text-xs text-neutral-400">Intent</div>
+                <span class="text-[11px] text-neutral-300 px-1.5 py-0.5 rounded border border-neutral-800">${it.status || 'Open'}</span>
+              </div>
+              <div class="text-sm text-neutral-100 break-all">${ih}</div>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="text-neutral-400">Commitment</div>
+                <div class="text-neutral-300 break-all">${it.commitment || '-'}</div>
+                <div class="text-neutral-400">Deadline</div>
+                <div class="text-neutral-300">${it.deadline || '-'}</div>
+              </div>
+              <div class="flex items-center gap-2 pt-2">
+                <button class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 px-2.5 py-1.5 text-xs text-neutral-200 transition" data-action="copy" data-value="${ih}">
+                  <i data-lucide="copy" class="h-3.5 w-3.5"></i> Copy
+                </button>
+                <button class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 px-2.5 py-1.5 text-xs text-neutral-200 transition" data-action="status" data-intent="${ih}">
+                  <i data-lucide="refresh-ccw" class="h-3.5 w-3.5"></i> Status
+                </button>
+              </div>
+            `;
+            recentIntents.appendChild(card);
+          });
+        }
+        lucide.createIcons({ attrs: { 'stroke-width': 1.5 } });
+
+        // List view
+        intentList.innerHTML = '';
+        list.forEach((it, idx) => {
+          const row = document.createElement('div');
+          row.className = 'py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3';
+          row.innerHTML = `
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded border border-neutral-800 text-[11px] text-neutral-300">${it.status || 'Open'}</span>
+                <span class="text-xs text-neutral-500">${new Date(it.createdAt || Date.now()).toLocaleString()}</span>
+              </div>
+              <div class="text-sm text-neutral-100 break-all mt-1">${it.intentHash || '-'}</div>
+              <div class="text-xs text-neutral-400 break-all mt-1">Commitment: ${it.commitment || '-'}</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 px-2.5 py-1.5 text-xs text-neutral-200 transition" data-row="${idx}" data-action="refresh">
+                <i data-lucide="refresh-ccw" class="h-3.5 w-3.5"></i> Refresh
+              </button>
+              <button class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 px-2.5 py-1.5 text-xs text-neutral-200 transition" data-row="${idx}" data-action="copy">
+                <i data-lucide="copy" class="h-3.5 w-3.5"></i> Copy
+              </button>
+              <button class="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/70 hover:bg-neutral-900 ring-1 ring-white/5 px-2.5 py-1.5 text-xs text-neutral-200 transition" data-row="${idx}" data-action="remove">
+                <i data-lucide="x" class="h-3.5 w-3.5"></i> Remove
+              </button>
+            </div>
+          `;
+          intentList.appendChild(row);
+        });
+        lucide.createIcons({ attrs: { 'stroke-width': 1.5 } });
+      }
+
+      function setConnectedUI(on) {
+        if (on) {
+          connectBtn.classList.add('hidden');
+          accountPill.classList.remove('hidden');
+          chainBadge.classList.remove('hidden');
+          overviewConnected.textContent = 'Yes';
+        } else {
+          connectBtn.classList.remove('hidden');
+          accountPill.classList.add('hidden');
+          chainBadge.classList.add('hidden');
+          overviewConnected.textContent = 'No';
+        }
+      }
+
+      function switchView(key) {
+        views.forEach(v => {
+          v.classList.toggle('hidden', v.dataset.view !== key);
+        });
+        setActiveNav(key);
+      }
+
+      // Active nav styling
+      function setActiveNav(key) {
+        navBtns.forEach(btn => {
+          const isActive = btn.dataset.nav === key;
+          btn.setAttribute('aria-current', isActive ? 'page' : 'false');
+          btn.classList.toggle('bg-neutral-900', isActive);
+          btn.classList.toggle('text-neutral-100', isActive);
+          btn.classList.toggle('border-neutral-800', isActive);
+          btn.classList.toggle('ring-1', isActive);
+          btn.classList.toggle('ring-white/5', isActive);
+        });
+      }
+
+      // Wallet
+      async function connect() {
+        if (!window.ethereum) {
+          showToast('No wallet found', 'error');
+          return;
+        }
+        try {
+          provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+          await provider.send('eth_requestAccounts', []);
+          signer = provider.getSigner();
+          account = await signer.getAddress();
+          const net = await provider.getNetwork();
+          chainId = net.chainId;
+          accountAddr.textContent = shortAddr(account);
+          chainName.textContent = `Chain ${chainId}`;
+          setConnectedUI(true);
+
+          window.ethereum.on('accountsChanged', () => window.location.reload());
+          window.ethereum.on('chainChanged', () => window.location.reload());
+
+          await refreshRewardsFn();
+        } catch (e) {
+          console.error(e);
+          showToast(e.message || 'Connect failed', 'error');
+        }
+      }
+
+      connectBtn.addEventListener('click', connect);
+      copyAddr.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(account); showToast('Address copied', 'success'); } catch {}
+      });
+
+      // Navigation
+      const navBtns = document.querySelectorAll('.nav-btn');
+      navBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          switchView(btn.dataset.nav);
+        });
+      });
+      const openCommitBtns = document.querySelectorAll('[data-open-commit]');
+      openCommitBtns.forEach(btn => {
+        btn.addEventListener('click', () => switchView('commit'));
+      });
+
+      // Settings
+      loadLS();
+      saveSettings.addEventListener('click', () => { saveLS(); showToast('Settings saved', 'success'); });
+
+      // Secret
+      genSecretBtn.addEventListener('click', () => {
+        const bytes = ethers.utils.randomBytes(32);
+        const hex = ethers.utils.hexlify(bytes);
+        secretInput.value = hex;
+        showToast('Secret generated', 'success');
+      });
+
+      // Compute commitment
+      computeCommit.addEventListener('click', () => {
+        try {
+          const { commitment } = computeCommitment();
+          commitmentOut.textContent = commitment;
+          intentTypeOut.textContent = isCrossChain() ? 'CrossChain' : 'SameChain';
+          showToast('Commitment computed', 'success');
+        } catch (e) {
+          showToast(e.message || 'Compute failed', 'error');
+        }
+      });
+
+      // Submit via wallet
+      submitWallet.addEventListener('click', async () => {
+        try {
+          if (!signer) throw new Error('Connect wallet first');
+          const { commitment } = computeCommitment();
+          const deadline = nowPlusMins(deadlineMins.value || 15);
+          const ctr = getContract();
+
+          let tx;
+          if (isCrossChain()) {
+            const dId = destChainId.value.trim() || '0';
+            const dRcpt = destRecipient.value.trim() || ethers.constants.AddressZero;
+            tx = await ctr.commitCrossChain(commitment, deadline, ethers.BigNumber.from(dId), dRcpt);
+          } else {
+            tx = await ctr.commitIntent(commitment, deadline);
+          }
+          showToast('Transaction sent', 'info');
+          txHashOut.textContent = tx.hash;
+
+          const explorer = explorerUrl.value.trim() || 'https://etherscan.io';
+          viewOnExplorer.onclick = () => window.open(`${explorer}/tx/${tx.hash}`, '_blank');
+
+          const rc = await tx.wait();
+          let intentHash = null;
+          for (const lg of rc.logs) {
+            try {
+              const parsed = iface.parseLog(lg);
+              if (parsed && parsed.name === 'IntentCommitted') {
+                intentHash = parsed.args.intentHash;
+                break;
+              }
+            } catch {}
+          }
+          if (!intentHash) {
+            showToast('Could not decode intentHash from logs. Use backend to retrieve.', 'error');
+          } else {
+            intentHashOut.textContent = intentHash;
+          }
+
+          const secrets = getSecretsLS();
+          secrets[commitment] = secretInput.value.trim();
+          setSecretsLS(secrets);
+
+          pushIntentLocal({
+            intentHash: intentHash || null,
+            commitment,
+            deadline,
+            status: 'Open',
+            via: 'wallet',
+            txHash: tx.hash
+          });
+
+          renderIntents();
+          showToast('Commit submitted', 'success');
+        } catch (e) {
+          console.error(e);
+          showToast(e.message || 'Submit failed', 'error');
+        }
+      });
+
+      // Submit via backend
+      submitBackend.addEventListener('click', async () => {
+        try {
+          const { commitment } = computeCommitment();
+          const deadline = nowPlusMins(deadlineMins.value || 15);
+          const url = getBackend();
+          const cross = isCrossChain();
+          const payload = cross
+            ? { commitment, deadline, destChainId: destChainId.value.trim(), destRecipient: destRecipient.value.trim() || ethers.constants.AddressZero }
+            : { commitment, deadline };
+
+        const endpoint = cross ? '/api/intent/commitCrossChain' : '/api/intent/commit';
+          const res = await fetch(url + endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) {
+            const t = await res.text();
+            throw new Error(`Backend error: ${t}`);
+          }
+          const data = await res.json();
+          txHashOut.textContent = data.txHash || '-';
+          intentHashOut.textContent = data.intentHash || '-';
+
+          const explorer = explorerUrl.value.trim() || 'https://etherscan.io';
+          if (data.txHash) {
+            viewOnExplorer.onclick = () => window.open(`${explorer}/tx/${data.txHash}`, '_blank');
+          }
+
+          const secrets = getSecretsLS();
+          secrets[commitment] = secretInput.value.trim();
+          if (data.intentHash) secrets[data.intentHash] = secretInput.value.trim();
+          setSecretsLS(secrets);
+
+          pushIntentLocal({
+            intentHash: data.intentHash || null,
+            commitment,
+            deadline,
+            status: 'Open',
+            via: 'backend',
+            txHash: data.txHash || null
+          });
+
+          renderIntents();
+          showToast('Commit relayed', 'success');
+        } catch (e) {
+          console.error(e);
+          showToast(e.message || 'Backend submit failed', 'error');
+        }
+      });
+
+      // Intents interactions
+      refreshIntents.addEventListener('click', () => {
+        renderIntents();
+        showToast('Intents refreshed', 'success');
+      });
+
+      recentIntents.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        if (action === 'copy') {
+          await navigator.clipboard.writeText(btn.dataset.value);
+          showToast('Copied', 'success');
+        }
+        if (action === 'status') {
+          const ih = btn.dataset.intent;
+          if (!ih || !ih.startsWith('0x') || ih.length < 10) {
+            showToast('No intentHash for this entry yet', 'error');
+            return;
+          }
+          await fetchStatusAndUpdate(ih);
+        }
+      });
+
+      intentList.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const row = Number(btn.dataset.row);
+        const list = getIntentsLS();
+        const it = list[row];
+        if (!it) return;
+        const action = btn.dataset.action;
+
+        if (action === 'copy') {
+          await navigator.clipboard.writeText(it.intentHash || it.commitment || '');
+          showToast('Copied', 'success');
+        } else if (action === 'remove') {
+          list.splice(row, 1);
+          setIntentsLS(list);
+          renderIntents();
+          showToast('Removed', 'success');
+        } else if (action === 'refresh') {
+          if (!it.intentHash) {
+            showToast('No intentHash available yet', 'error');
+            return;
+          }
+          await fetchStatusAndUpdate(it.intentHash);
+        }
+      });
+
+      importIntent.addEventListener('click', async () => {
+        const ih = prompt('Paste intentHash (0x...)');
+        if (!ih) return;
+        pushIntentLocal({ intentHash: ih.trim(), status: 'Open' });
+        showToast('Imported', 'success');
+      });
+
+      clearIntents.addEventListener('click', () => {
+        if (confirm('Clear all locally stored intents?')) {
+          setIntentsLS([]);
+          renderIntents();
+          showToast('Cleared', 'success');
+        }
+      });
+
+      async function fetchStatusAndUpdate(intentHash) {
+        try {
+          let statusInfo = null;
+          const url = backendUrl.value.trim();
+          if (url) {
+            try {
+              const res = await fetch(url.replace(/\/$/, '') + '/api/intent/' + intentHash);
+              if (res.ok) {
+                statusInfo = await res.json();
+              }
+            } catch {}
+          }
+          if (!statusInfo && portalAddress.value && signer) {
+            const ctr = getContract();
+            const s = await ctr.getIntentStatus(intentHash);
+            statusInfo = { user: s.user, intentType: s.intentType, status: s.status, destChainId: s.destChainId?.toString?.(), deadline: s.deadline?.toString?.() };
+          }
+
+          if (!statusInfo) throw new Error('Status not found');
+
+          const list = getIntentsLS();
+          const idx = list.findIndex(x => x.intentHash === intentHash);
+          if (idx >= 0) {
+            list[idx].status = mapStatus(statusInfo.status);
+            list[idx].deadline = statusInfo.deadline?.toString?.() || list[idx].deadline;
+            setIntentsLS(list);
+            renderIntents();
+          }
+          showToast(`Status: ${mapStatus(statusInfo.status)}`, 'success');
+        } catch (e) {
+          console.error(e);
+          showToast(e.message || 'Failed to fetch status', 'error');
+        }
+      }
+
+      // Rewards
+      async function refreshRewardsFn() {
+        try {
+          if (!signer) throw new Error('Connect wallet first');
+          const addr = await signer.getAddress();
+
+          if (portalAddress.value) {
+            const ctr = getContract();
+            const amt = await ctr.pendingRewards(addr);
+            rewardsAmount.textContent = ethers.utils.formatEther(amt) + ' ETH';
+            overviewRewards.textContent = ethers.utils.formatEther(amt) + ' ETH';
+          } else {
+            rewardsAmount.textContent = '-';
+          }
+
+          if (backendUrl.value) {
+            try {
+              const res = await fetch(getBackend() + '/api/intent/pendingRewards/' + addr);
+              if (res.ok) {
+                const data = await res.json();
+                if (data && data.amount) {
+                  rewardsAmountBackend.textContent = data.amount;
+                }
+              }
+            } catch {}
+          }
+        } catch (e) {
+          console.warn('Rewards refresh:', e.message);
+        }
+      }
+
+      refreshRewards.addEventListener('click', refreshRewardsFn);
+      claimRewardsBtn.addEventListener('click', async () => {
+        try {
+          const ctr = getContract();
+          const tx = await ctr.claimRewards();
+          showToast('Claim sent', 'info');
+          await tx.wait();
+          lastClaim.textContent = new Date().toLocaleString();
+          await refreshRewardsFn();
+          showToast('Rewards claimed', 'success');
+        } catch (e) {
+          console.error(e);
+          showToast(e.message || 'Claim failed', 'error');
+        }
+      });
+
+      // Solver
+      registerSolver.addEventListener('click', async () => {
+        try {
+          const ctr = getContract();
+          const value = ethers.utils.parseEther((solverStake.value || '0').toString());
+          const tx = await ctr.registerSolver({ value });
+          solverTx.textContent = 'Tx: ' + tx.hash;
+          showToast('Register tx sent', 'info');
+          await tx.wait();
+          showToast('Solver registered', 'success');
+        } catch (e) {
+          console.error(e);
+          showToast(e.message || 'Register failed', 'error');
+        }
+      });
+
+      registerSolverBackend.addEventListener('click', async () => {
+        try {
+          const url = getBackend();
+          const wei = ethers.utils.parseEther((solverStake.value || '0').toString()).toString();
+          const res = await fetch(url + '/api/solver/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stakeWei: wei })
+          });
+          if (!res.ok) {
+            const t = await res.text();
+            throw new Error(`Backend error: ${t}`);
+          }
+          const data = await res.json();
+          solverTx.textContent = 'Tx: ' + (data.txHash || '-');
+          showToast('Backend register submitted', 'success');
+        } catch (e) {
+          console.error(e);
+          showToast(e.message || 'Backend register failed', 'error');
+        }
+      });
+
+      fetchIntentStatus.addEventListener('click', async () => {
+        const ih = queryIntentHash.value.trim();
+        if (!ih) return;
+        manualStatus.textContent = 'Loading...';
+        try {
+          const url = backendUrl.value.trim();
+          let statusInfo = null;
+          if (url) {
+            const res = await fetch(url.replace(/\/$/, '') + '/api/intent/' + ih);
+            if (res.ok) statusInfo = await res.json();
+          }
+          if (!statusInfo && portalAddress.value && signer) {
+            const ctr = getContract();
+            const s = await ctr.getIntentStatus(ih);
+            statusInfo = { user: s.user, intentType: s.intentType, status: s.status, destChainId: s.destChainId?.toString?.(), deadline: s.deadline?.toString?.() };
+          }
+          if (!statusInfo) throw new Error('Not found');
+          manualStatus.textContent = JSON.stringify({
+            user: statusInfo.user,
+            intentType: String(statusInfo.intentType),
+            status: mapStatus(statusInfo.status),
+            destChainId: String(statusInfo.destChainId || ''),
+            deadline: String(statusInfo.deadline || '')
+          }, null, 2);
+        } catch (e) {
+          manualStatus.textContent = 'Error: ' + (e.message || 'Failed');
+        }
+      });
+
+      // Explorer view button
+      viewOnExplorer.addEventListener('click', () => {
+        const hash = txHashOut.textContent.trim();
+        const base = explorerUrl.value.trim() || 'https://etherscan.io';
+        if (hash && hash.startsWith('0x')) window.open(`${base}/tx/${hash}`, '_blank');
+      });
+
+      // Init
+      (function init() {
+        renderIntents();
+        updateOverviewCounts();
+        if (!portalAddress.value) {
+          portalAddress.value = '';
+        }
+        if (!backendUrl.value) {
+          backendUrl.value = 'http://localhost:3001';
+        }
+        setActiveNav('dashboard');
+      })();
+    </script>
+  
+</body></html>

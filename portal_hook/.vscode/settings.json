@@ -1,0 +1,9 @@
+{
+  // Ensure .sol files are recognized as Solidity in this workspace
+  "files.associations": {
+    "*.sol": "solidity"
+  },
+
+  // Allow the editor to use semantic highlighting when available
+  "editor.semanticHighlighting.enabled": true
+}
