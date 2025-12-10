@@ -10,4 +10,7 @@ export const AppDataSource = new DataSource({
   synchronize: true, // AUTO schema sync — no migrations
   logging: false,
   entities: [Intent, RewardClaim, AttackerPenalty],
+  ssl: {
+    rejectUnauthorized: false // Railway requires SSL
+  }
 });

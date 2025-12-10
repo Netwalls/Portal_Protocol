@@ -24,7 +24,9 @@ export const AppContext = React.createContext<AppContext | null>(null);
 
 export default function Layout(): JSX.Element {
   const [view, setView] = useState<NavKey>('dashboard');
-  const [backendUrl, setBackendUrl] = useState('http://localhost:3001');
+  const [backendUrl, setBackendUrl] = useState(
+    import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'
+  );
   const [portalAddress, setPortalAddress] = useState('0x5FbDB2315678afecb367f032d93F642f64180aa3');
   const [account, setAccount] = useState<string | null>(null);
   const [chainName, setChainName] = useState('Anvil');
