@@ -1,94 +1,141 @@
-# Portal — Intent-based DEX Hook
+# Portal Protocol — Private Intents, Fair MEV, Real User Rewards
 
-Portal is a privacy-preserving intent layer for decentralized trading: a hybrid on-chain/off-chain system that lets users commit a trade “intent” with a secret, have specialized solvers settle the trade, and enable relayers and solvers to capture value through fees and rewards.
+**Portal turns toxic MEV into user rebates.**
 
-## Why it matters (problem)
+Instead of letting searchers and frontrunners steal value from your swaps, Portal forces them to pay a price — and then hands 30% of every caught penalty directly back to you.
 
-Current on-chain trading flows are either:
-Direct and exposed (front-running, sandwich attacks), or
-Complex to coordinate off-chain and on-chain in an auditable way.
-Traders want predictable execution and privacy for trade parameters. Liquidity seekers and MEV-aware solvers want a reliable way to discover and settle profitable opportunities without exposing sensitive order details on-chain.
-What Portal solves (value proposition)
+Built on the bleeding edge of Ethereum tech:
+- Uniswap V4 Hooks
+- Fhenix encrypted intents (fully private trades)
+- EigenLayer AVS restaking + slashing
+- Transparent penalty redistribution
 
-Privacy + predictability: users submit a commitment instead of full trade parameters, keeping secrets off-chain until settlement.
-Marketplace for settlement: solvers register, stake, and competitively produce settlements; relayers can submit commitments on users’ behalf.
-Hybrid model that enables both decentralized settlement (on-chain) and off-chain orchestration (background services) for reliability and scale.
-Reference console: a web interface is provided as a reference implementation for creating, tracking, and claiming intents and for solver interactions.
-Product snapshot (what exists today)
+If someone tries to sandwich or frontrun a Portal trade → they lose **0.05 ETH** and you get **0.015 ETH** of it. Simple.
 
-Web console: a reference web interface to compute commitments, submit via wallet or backend relayer, view intents, view/claim rewards, and register as solver.
-Smart contract hook: on-chain contract records commitments, emits events for backends to ingest, tracks rewards, and exposes view functions for intent status.
-Backends: APIs and background jobs that ingest events, persist intent state, run settlement jobs, and provide relayer services.
-Cross-chain readiness: supports optional destination chain/recipient fields to enable cross-chain intents.
-How it works (high level — no technical jargon)
+https://github.com/iamtechhunter/portal_protocol
 
-User creates an “intent” describing a trade and a secret; a cryptographic commitment hides details on-chain.
-Commitment is submitted (wallet or via a relayer).
-The on-chain contract announces the commitment with an event.
-Off-chain services pick up open intents; solvers find ways to settle them profitably; settlements are finalized on-chain.
-Solvers and relayers earn rewards; users get executed trades with reduced front-running risk.
-Market opportunity
+---
 
-Decentralized Exchange (DEX) market continues to grow; privacy and MEV protection are rising priorities.
-Portal targets retail traders who want safer execution and institutional liquidity providers/solvers who can extract value by finding settlement opportunities.
-Potential revenue streams: relayer fees, premium solver services, integration fees for DEXes & custodians, and marketplace commissions.
-Business model & monetization
+## How It Works 
 
-Relayer fees: a small percentage or flat fee for relaying commitments and submitting transactions.
-Solver marketplace: platform can take a commission from successful settlements or charge listing fees for premium solver features.
-Enterprise integrations: white-label or API pricing for exchanges, custodians, or trading desks.
-Data & analytics: anonymized market insights, subscription analytics for liquidity providers and hedging desks.
-Traction & status (example bullet points — replace with real metrics)
+1. You send a swap, but instead of broadcasting it publicly, you encrypt it with Fhenix and commit only a hash on-chain. Nobody can see what you’re trading.
+2. Your intent sits safely for a short delay (1–2 blocks).
+3. Honest solvers wait, then reveal and execute your trade exactly as you wanted.
+4. If a searcher tries to jump in front during the delay → the Uniswap V4 hook catches them, slashes 0.05 ETH from their restaked bond (via EigenLayer), and adds it to the reward pool.
+5. Every time an attacker is caught, the 0.05 ETH is automatically split:
+   - 40% → Liquidity Providers
+   - 30% → You and every other Portal user (claimable)
+   - 20% → Protocol treasury
+   - 10% → Honest solvers (incentive to stay honest)
 
-Prototype web console with commit/submit/track flows implemented.
-Smart contract deployed to test networks and covered by unit tests.
-Background services for event ingestion and intent tracking exist and run locally.
-Initial solver/relayer flow demonstrated in-house.
-Roadmap (next 3–6 months — investor-focused milestones)
+More attackers = more money flowing back to real users.
 
-0–1 month: Harden product-market fit through alpha testing with power users; collect feedback and measure settlement success rate.
-1–2 months: Run security hardening on contracts and backend; run a small public beta on a testnet; add view/dashboard for usage metrics.
-2–4 months: Integrate with 1–2 liquidity partners or DEX aggregators; pilot paid relayer flow; add basic canary production deployment.
-4–6 months: Launch public MVP on mainnet with monitored relayer nodes, documented APIs, and formal bug bounty / audit report; begin commercial partnerships.
-Go-to-market strategy
+---
 
-Developer + liquidity partnerships: integrate with DEXs and aggregators to seed intents and demonstrate settlement volume.
-Solver recruitment: incentivize solvers with attractive early rewards and easy onboarding tools.
-Community & growth: content and developer docs to attract integrators; targeted outreach to MEV researchers and trading firms.
-Enterprise outreach: offer private relayer installations and integration support for custodial wallets and exchanges.
-Competitive differentiation
+## Live Demo (works today on local Anvil)
 
-Privacy-focused design: the commitment + reveal pattern is exposed via a console as a reference implementation.
-Hybrid model: both on-chain guarantees and off-chain infrastructure for scalablity and reliability.
-Marketplace orientation: creating a neutral market for solvers and relayers to compete, improving execution quality.
-Key risks and mitigations
+You can try the entire flow in <5 minutes:
 
-Smart contract vulnerabilities (risk): mitigate with audits, pause mechanisms, multi-sig deployment, and staged rollouts.
-Liquidity & solver participation (risk): mitigate by seeding incentives, initial grants, and partnerships with liquidity providers.
-Regulatory or custodial constraints (risk): provide compliance-friendly integrations and clear separation of custody (users always sign their own reveals).
-Relayer/key compromise (risk): limit relayer privileges, rotate keys, and encourage decentralized relayer ecosystem.
-Team & go-to-hire (concise)
+```bash
+# 1. Start local chain
+anvil
 
-Core needs early: Solidity/security lead, backend engineer (jobs & infra), devops (production relayers, monitoring), growth/partnership lead (DEX + liquidity).
-Advisor hires: MEV researchers, smart-contract auditors, legal/compliance counsel.
-The ask (what we want from investors/partners)
+# 2.Backend (in another terminal)
+cd backend
+cp .env.example .env   # edit RPC_URL if needed
+npm install
+npm run dev
 
-Funding: for audits, integrations, relayer infra, and commercial sales (~seed amount to be specified).
-Partnerships: introductions to DEXs, liquidity providers, or custodial platforms for pilots.
-Talent: support recruiting senior roles in security and infra.
-Pilot customers: willing trading desks or DEX aggregators to run real intents on a testnet/mainnet pilot.
-Why now (timing)
+# 3. Frontend
+cd ../portal_frontend
+npm install
+npm run dev
+# → open http://localhost:5173
+```
 
-MEV and front-running visibility continue to grow; privacy-preserving execution and better settlement marketplaces are an emerging demand.
-Infrastructure is mature (reliable RPC providers, fast EVM toolchains, widely used relayer models) making this a low-friction moment for adoption.
-Contact & next steps
+Then just:
+1. Connect MetaMask (Anvil accounts have money)
+2. Go to “Commit” → create an encrypted intent
+3. Go to “Solver” → settle it → watch a fake attacker get caught
+4. Go to “Rewards” → see 0.015 ETH ready to claim → click Claim
 
-Demo available: the packaged web console (in this workspace) can be run locally or demoed on a private testnet deployment.
-Next steps we can run for you:
-Live demo and walkthrough.
-Security & audit plan and budget.
-Pilot proposal for a DEX or trading desk.
-Appendix — one-line technical summary (for quick reference)
+Refresh the page → everything is still there (PostgreSQL persistence)
 
-Portal is a hybrid on-chain/off-chain platform where users post cryptographic commitments for trades; dedicated solvers find and submit gas-efficient settlement transactions; off-chain services coordinate discovery, persistence, and relaying while on-chain contracts provide finality and reward accounting.
-If you’d like, I can:
+---
+
+## What You’ll See on the Rewards Page (the money shot)
+
+```
+Your Pending Rewards: 0.045 ETH (3 attackers caught while you slept)
+
+Penalty Distribution (per 0.05 ETH caught)
+├─ Liquidity Providers  → 0.02 ETH   (40%)
+├─ All Portal Users     → 0.015 ETH  (30%)  ← you claim this
+├─ Protocol Treasury    → 0.01 ETH   (20%)
+└─ Honest Solvers       → 0.005 ETH  (10%)
+
+Caught Attackers (last 10)
+🔴 0x1337...dead   → 0.05 ETH slashed   (2 min ago)
+🔴 0xbad0...beef   → 0.05 ETH slashed   (8 min ago)
+🔴 0xc0ff...ee42   → 0.05 ETH slashed   (15 min ago)
+
+Your Claim History
+Dec 9, 2025 23:11  → +0.015 ETH  (tx: 0xabc…)
+Dec 9, 2025 22:45  → +0.030 ETH  (tx: 2 penalties)
+```
+
+Yes, the attacker addresses are highlighted in angry red. Feels good.
+
+---
+
+## Tech Stack & Folder Structure
+
+```
+portal_protocol/
+├── portal_hook/            → Uniswap V4 Hook (Solidity + Forge)
+├── backend/                → Node.js + Express + TypeORM + PostgreSQL
+└── portal_frontend/        → React 18 + Vite + Tailwind + wagmi
+```
+
+### Smart Contract Highlights (`PortalHook.sol`)
+
+- Encrypted intent commitment (Fhenix)
+- Solver registration with EigenLayer restaking
+- Automatic 0.05 ETH slash on frontrun attempts
+- On-chain revenue split constants (40/30/20/10)
+
+### Backend
+
+Tracks every penalty permanently and calculates your exact rebate.  
+Every new penalty = free money for every user who hasn’t claimed it yet.
+
+### Frontend
+
+Clean, mobile-friendly UI that actually shows you the money you’re earning from sandwich bots.
+
+---
+
+## Why This Actually Matters
+
+Most “MEV protection” projects just hide your order or auction it privately.  
+Portal does the opposite: it baits attackers, catches them with cryptographic proof, slashes their stake, and mails you the profits.
+
+It’s the first system where regular users financially benefit every time a sandwich bot takes the bait.
+
+---
+
+## Current Status (December 2025)
+
+- Full local demo working today
+- All three layers (hook ↔ backend ↔ frontend) talking to each other
+- Persistence, claiming, history, attacker shame wall — all implemented
+- Ready for testnet deployment (Sepolia → Holesky → Mainnet path mapped)
+
+Want to help ship this to mainnet and start farming sandwich bots for real user rebates?
+
+Star ★ the repo, DM @iamtechhunter on Twitter/X, or just fork and start breaking things.
+
+Let’s turn toxic MEV into free money for DeFi users.
+
+— Made with ☕ and righteous anger by TechHunter
+``` 
