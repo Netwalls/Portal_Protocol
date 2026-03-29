@@ -2,8 +2,7 @@
 import 'dotenv/config';
 import { ethers } from 'ethers';
 import { portalABI } from '../abi/portal';
-import { AppDataSource } from '../db/data-source';
-import { Intent } from '../entities/Intent';
+import { Intent } from '../models/Intent';
 
 const provider = new ethers.JsonRpcProvider(process.env.RPC_URL || 'http://127.0.0.1:8545');
 const wallet = process.env.PRIVATE_KEY ? new ethers.Wallet(process.env.PRIVATE_KEY!, provider) : undefined;
@@ -171,38 +170,21 @@ export const contractService = {
 };
 
 // Listen for events and persist to DB. This module is imported after DB init in src/index.ts
-portal.on('IntentCommitted', async (intentHash: string, user: string, intentType: any, destChainId: any, deadline: any, event: any) => {
+portal.on('IntentCommitted', async (intentHash: string, user: string, _intentType: any, _destChainId: any, _deadline: any) => {
   try {
     console.log(`[EVENT] IntentCommitted ${intentHash} by ${user}`);
-    if (!AppDataSource.isInitialized) {
-      console.warn('DB not initialized yet — skipping IntentCommitted persistence');
-      return;
-    }
-    const repo = AppDataSource.getRepository(Intent);
-    // idempotent create: avoid duplicate by intentHash
-    const existing = await repo.findOneBy({ intentHash: intentHash.toString() });
-    if (existing) return;
-    const userLc = user.toString().toLowerCase();
-    const i = repo.create({ intentHash: intentHash.toString(), user: userLc, status: 'Open', commitTime: Math.floor(Date.now() / 1000) });
-    await repo.save(i);
+    const exists = await Intent.findOne({ intentHash: intentHash.toString() });
+    if (exists) return;
+    await Intent.create({ intentHash: intentHash.toString(), user: user.toString().toLowerCase(), status: 'Open', commitTime: Math.floor(Date.now() / 1000) });
   } catch (err) {
     console.error('Error handling IntentCommitted event', err);
   }
 });
 
-portal.on('IntentSettled', async (intentHash: string, solver: string, inputAmount: any, outputAmount: any, mevCaptured: any, userRebate: any, event: any) => {
+portal.on('IntentSettled', async (intentHash: string) => {
   try {
-    console.log(`[EVENT] IntentSettled ${intentHash} by solver ${solver}`);
-    if (!AppDataSource.isInitialized) {
-      console.warn('DB not initialized yet — skipping IntentSettled persistence');
-      return;
-    }
-    const repo = AppDataSource.getRepository(Intent);
-    const existing = await repo.findOneBy({ intentHash: intentHash.toString() });
-    if (existing) {
-      existing.status = 'Settled';
-      await repo.save(existing);
-    }
+    console.log(`[EVENT] IntentSettled ${intentHash}`);
+    await Intent.updateOne({ intentHash: intentHash.toString() }, { status: 'Settled' });
   } catch (err) {
     console.error('Error handling IntentSettled event', err);
   }

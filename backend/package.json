@@ -7,14 +7,11 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@prisma/client": "^5.15.0",
     "cors": "^2.8.5",
     "ethers": "^6.13.1",
     "express": "^4.19.2",
     "fhenixjs": "^0.4.1",
-    "pg": "^8.16.3",
-    "reflect-metadata": "^0.2.2",
-    "typeorm": "^0.3.28"
+    "mongoose": "^9.3.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
