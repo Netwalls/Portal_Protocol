@@ -2,18 +2,23 @@
 import { FhenixClient } from 'fhenixjs';
 import { ethers } from 'ethers';
 
-let fhenixClient: any | undefined;
+let fhenixClient: FhenixClient | undefined;
 
-async function getFhenixClient(): Promise<any | undefined> {
+async function getFhenixClient(): Promise<FhenixClient | undefined> {
   if (fhenixClient) return fhenixClient;
   try {
-    // Try to initialize using RPC provider or web3 provider if available
-    const providerUrl = process.env.FHENIX_RPC_URL || process.env.RPC_URL;
-    const provider = providerUrl ? new ethers.JsonRpcProvider(providerUrl) : undefined;
-    fhenixClient = new FhenixClient({ provider, rpcUrl: providerUrl, chainId: Number(process.env.FHENIX_CHAIN_ID || process.env.CHAIN_ID || 69000) } as any);
+    const rpcUrl = process.env.FHENIX_RPC_URL;
+    if (!rpcUrl) throw new Error('FHENIX_RPC_URL not set');
+
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    // Verify the node is reachable before creating client
+    await provider.getBlockNumber();
+
+    fhenixClient = new FhenixClient({ provider } as any);
+    console.log('[fhenixService] Connected to Fhenix Helium:', rpcUrl);
     return fhenixClient;
   } catch (err) {
-    console.warn('Fhenix client init failed, falling back to local shim:', (err as Error).message);
+    console.warn('[fhenixService] Fhenix client init failed, using keccak256 fallback:', (err as Error).message);
     fhenixClient = undefined;
     return undefined;
   }
@@ -28,75 +33,51 @@ export const fhenixService = {
     secret: string;
     destToken: string;
   }) {
-    console.log('[fhenixService.encryptIntent] Input data:', {
-      tokenIn: data.tokenIn,
-      tokenOut: data.tokenOut,
-      amountIn: data.amountIn,
-      minOut: data.minOut,
-      secret: data.secret,
-      destToken: data.destToken
-    });
+    // Validate and normalize addresses — lowercase first so ethers v6 accepts non-EIP55 mixed case
+    const toAddr = (raw: string, label: string) => {
+      try { return ethers.getAddress(raw.toLowerCase()); }
+      catch { throw new Error(`Invalid ${label}: ${raw}`); }
+    };
+    const tokenIn   = toAddr(data.tokenIn,   'tokenIn');
+    const tokenOut  = toAddr(data.tokenOut,  'tokenOut');
+    const destToken = toAddr(data.destToken, 'destToken');
+    const amountIn = BigInt(data.amountIn);
+    const minOut   = BigInt(data.minOut);
 
-    // Validate all addresses before packing
-    if (!data.tokenIn || !ethers.isAddress(data.tokenIn)) {
-      throw new Error(`Invalid or missing tokenIn address: ${data.tokenIn}`);
-    }
-    if (!data.tokenOut || !ethers.isAddress(data.tokenOut)) {
-      throw new Error(`Invalid or missing tokenOut address: ${data.tokenOut}`);
-    }
-    if (!data.destToken || !ethers.isAddress(data.destToken)) {
-      throw new Error(`Invalid or missing destToken address: ${data.destToken}`);
-    }
-
-    // Normalize addresses to checksummed format
-    const tokenIn = ethers.getAddress(data.tokenIn);
-    const tokenOut = ethers.getAddress(data.tokenOut);
-    const destToken = ethers.getAddress(data.destToken);
-
-    console.log('[fhenixService.encryptIntent] Normalized addresses:', {
-      tokenIn,
-      tokenOut,
-      destToken
-    });
-
-    // Validate numeric values
-    try {
-      const amountInBig = BigInt(data.amountIn);
-      const minOutBig = BigInt(data.minOut);
-      console.log('[fhenixService.encryptIntent] Valid numeric values:', {
-        amountIn: amountInBig.toString(),
-        minOut: minOutBig.toString()
-      });
-    } catch (e) {
-      throw new Error(`Invalid numeric values: amountIn=${data.amountIn}, minOut=${data.minOut}. Error: ${(e as Error).message}`);
-    }
-
-    // Pack data (keccak256 hash for commitment)
-    console.log('[fhenixService.encryptIntent] Packing data for solidityPacked...');
+    // Pack the full intent for commitment (used in fallback + as the on-chain commitment base)
     const packed = ethers.solidityPacked(
       ['address', 'address', 'uint256', 'uint256', 'bytes32', 'address'],
       [tokenIn, tokenOut, data.amountIn, data.minOut, data.secret, destToken]
     );
 
-    console.log('[fhenixService.encryptIntent] Packed successfully:', packed.substring(0, 50) + '...');
-
+    // Try real Fhenix FHE encryption
     const client = await getFhenixClient();
-    if (client && typeof client.encrypt_uint128 === 'function') {
+    if (client) {
       try {
-        const encrypted = await client.encrypt_uint128(packed);
-        // normalize to Uint8Array if needed
-        if (encrypted instanceof Uint8Array) return '0x' + Buffer.from(encrypted).toString('hex');
-        if (typeof encrypted === 'string') return encrypted.startsWith('0x') ? encrypted : '0x' + Buffer.from(encrypted).toString('hex');
-        if (Array.isArray(encrypted)) return '0x' + Buffer.from(Uint8Array.from(encrypted as number[])).toString('hex');
-        // last resort: stringify
-        return '0x' + Buffer.from(String(encrypted)).toString('hex');
+        // Encrypt amountIn — the MEV-sensitive value — as FHE uint128
+        // This is what prevents frontrunners from knowing the swap size
+        const encryptedAmount = await client.encrypt_uint128(amountIn);
+
+        // Pack: FHE ciphertext (encrypted amountIn) + plaintext minOut + token addresses + secret hash
+        // The encrypted amount is what gets committed on-chain; only the Fhenix network can decrypt it
+        const cipherBytes = '0x' + Buffer.from(encryptedAmount.data).toString('hex');
+
+        // Append remaining intent fields as ABI-encoded suffix so the contract can read them
+        const suffix = ethers.AbiCoder.defaultAbiCoder().encode(
+          ['address', 'address', 'uint256', 'bytes32', 'address'],
+          [tokenIn, tokenOut, minOut, data.secret, destToken]
+        );
+
+        const commitment = cipherBytes + suffix.slice(2); // strip 0x from suffix
+        console.log('[fhenixService] Real FHE encryption applied. Ciphertext length:', encryptedAmount.data.length, 'bytes');
+        return commitment;
       } catch (err) {
-        console.warn('Fhenix encrypt failed, falling back to local hash:', (err as Error).message);
+        console.warn('[fhenixService] encrypt_uint128 failed, falling back:', (err as Error).message);
       }
     }
 
-    // Fallback shim: return keccak256 of packed so we at least return deterministic bytes for local testing.
-    const hash = ethers.keccak256(packed);
-    return hash;
+    // Fallback: keccak256 of packed intent (deterministic, used for local/testing)
+    console.warn('[fhenixService] Using keccak256 fallback (not real FHE)');
+    return ethers.keccak256(packed);
   }
 };

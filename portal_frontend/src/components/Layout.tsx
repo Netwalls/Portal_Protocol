@@ -18,18 +18,24 @@ interface AppContext {
   setPortalAddress: (addr: string) => void;
   setAccount: (addr: string | null) => void;
   setChainName: (name: string) => void;
+  navigate: (page: NavKey) => void;
 }
 
 export const AppContext = React.createContext<AppContext | null>(null);
 
 export default function Layout(): JSX.Element {
+  const REQUIRED_CHAIN = '0x14a34'; // Base Sepolia (84532)
+
   const [view, setView] = useState<NavKey>('dashboard');
+  const [chainId, setChainId] = useState<string>('');
   const [backendUrl, setBackendUrl] = useState(
     import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'
   );
-  const [portalAddress, setPortalAddress] = useState('0x09d008E00f62605dA8Ffa64BAf7A2f08082FcE19');
+  const [portalAddress, setPortalAddress] = useState(
+    import.meta.env.VITE_PORTAL_ADDRESS || '0x5FbDB2315678afecb367f032d93F642f64180aa3'
+  );
   const [account, setAccount] = useState<string | null>(null);
-  const [chainName, setChainName] = useState('Base Sepolia');
+  const [chainName, setChainName] = useState('—');
   const portalAddressInputRef = useRef<HTMLInputElement>(null);
   const backendUrlInputRef = useRef<HTMLInputElement>(null);
   const connectBtnRef = useRef<HTMLButtonElement>(null);
@@ -43,6 +49,16 @@ export default function Layout(): JSX.Element {
     if (backendUrlInputRef.current) backendUrlInputRef.current.value = backendUrl;
     if (chainNameRef.current) chainNameRef.current.textContent = chainName;
   }, [portalAddress, backendUrl, chainName]);
+
+  // Detect chain on mount and listen for changes even before wallet connect
+  useEffect(() => {
+    const w: any = window;
+    if (!w.ethereum) return;
+    detectChain(w).then(setChainName);
+    const handler = () => detectChain(w).then(setChainName);
+    w.ethereum.on('chainChanged', handler);
+    return () => w.ethereum.removeListener('chainChanged', handler);
+  }, []);
 
   useEffect(() => {
     if (account) {
@@ -62,20 +78,73 @@ export default function Layout(): JSX.Element {
     return noApi.endsWith('/') ? noApi.slice(0, -1) : noApi;
   };
 
+  const CHAIN_NAMES: Record<string, string> = {
+    '0x1':     'Ethereum',
+    '0x5':     'Goerli',
+    '0xaa36a7':'Sepolia',
+    '0x14a34': 'Base Sepolia',  // 84532
+    '0x2105':  'Base',
+    '0xa4b1':  'Arbitrum One',
+    '0x66eee': 'Arbitrum Sepolia',
+    '0x7a69':  'Anvil (31337)',
+    '0x539':   'Anvil (1337)',
+    '0x138b':  'Mantle Sepolia',
+    '0x1388':  'Mantle',
+    '0x89':    'Polygon',
+    '0x13882': 'Polygon Amoy',
+    '0xa':     'Optimism',
+    '0xaa37dc':'Optimism Sepolia',
+  };
+
+  const detectChain = async (w: any) => {
+    try {
+      const chainId = await w.ethereum.request({ method: 'eth_chainId' });
+      setChainId(chainId);
+      return CHAIN_NAMES[chainId.toLowerCase()] || `Chain ${parseInt(chainId, 16)}`;
+    } catch { return 'Unknown'; }
+  };
+
+  const switchToBaseSepolia = async () => {
+    const w: any = window;
+    if (!w.ethereum) return;
+    try {
+      await w.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: REQUIRED_CHAIN }],
+      });
+    } catch (err: any) {
+      // Chain not added yet — add it
+      if (err.code === 4902) {
+        await w.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: REQUIRED_CHAIN,
+            chainName: 'Base Sepolia',
+            nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
+            rpcUrls: ['https://sepolia.base.org'],
+            blockExplorerUrls: ['https://sepolia.basescan.org'],
+          }],
+        });
+      }
+    }
+  };
+
   const handleConnect = async () => {
     if (account) {
       setAccount(null);
+      setChainName('—');
       return;
     }
     try {
       const w: any = window;
-      if (w.ethereum) {
-        const accounts = await w.ethereum.request({ method: 'eth_requestAccounts' });
-        setAccount(accounts[0]);
-        setChainName('Anvil (31337)');
-      } else {
-        alert('MetaMask or compatible wallet not found');
-      }
+      if (!w.ethereum) { alert('MetaMask or compatible wallet not found'); return; }
+      const accounts = await w.ethereum.request({ method: 'eth_requestAccounts' });
+      setAccount(accounts[0]);
+      setChainName(await detectChain(w));
+
+      // Update chain name if user switches network
+      w.ethereum.on('chainChanged', async () => setChainName(await detectChain(w)));
+      w.ethereum.on('accountsChanged', (accs: string[]) => setAccount(accs[0] ?? null));
     } catch (err: any) {
       console.error('Connect failed:', err);
     }
@@ -94,7 +163,7 @@ export default function Layout(): JSX.Element {
   }
 
   return (
-    <AppContext.Provider value={{ backendUrl, portalAddress, account, chainName, setBackendUrl, setPortalAddress, setAccount, setChainName }}>
+    <AppContext.Provider value={{ backendUrl, portalAddress, account, chainName, setBackendUrl, setPortalAddress, setAccount, setChainName, navigate: setView }}>
       <div className="flex min-h-screen">
         <aside className="hidden lg:flex w-72 flex-col border-r border-neutral-800/80 bg-neutral-950/80 ring-1 ring-white/5 px-0">
           <div className="px-6 py-5 flex items-center gap-3">
@@ -149,8 +218,15 @@ export default function Layout(): JSX.Element {
             </div>
 
             <div className="flex items-center gap-3 ml-auto">
-              <div ref={chainBadgeRef} className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/60 px-3 py-2">
-                <span ref={chainNameRef} className="text-sm text-neutral-300">-</span>
+              <div className="flex items-center gap-2">
+                <div ref={chainBadgeRef} className={`flex items-center gap-2 rounded-md border px-3 py-2 ${chainId && chainId.toLowerCase() !== REQUIRED_CHAIN ? 'border-red-800/60 bg-red-950/30' : 'border-neutral-800 bg-neutral-900/60'}`}>
+                  <span ref={chainNameRef} className={`text-sm ${chainId && chainId.toLowerCase() !== REQUIRED_CHAIN ? 'text-red-400' : 'text-neutral-300'}`}>-</span>
+                </div>
+                {chainId && chainId.toLowerCase() !== REQUIRED_CHAIN && (
+                  <button onClick={switchToBaseSepolia} className="rounded-md border border-amber-700/50 bg-amber-900/30 hover:bg-amber-900/50 px-3 py-2 text-xs text-amber-300 transition-colors whitespace-nowrap">
+                    Switch to Base Sepolia
+                  </button>
+                )}
               </div>
               <button ref={connectBtnRef} onClick={handleConnect} className="inline-flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/60 px-3 py-2 text-sm text-neutral-200">Connect</button>
               <div ref={accountPillRef} className="hidden items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/60 px-3 py-2">

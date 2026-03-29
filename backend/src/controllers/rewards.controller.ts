@@ -2,12 +2,24 @@
 import { Request, Response } from 'express';
 import { ethers } from 'ethers';
 import { AppDataSource } from '../db/data-source';
-import { Intent } from '../entities/Intent';
 import { RewardClaim } from '../entities/RewardClaim';
 import { AttackerPenalty } from '../entities/AttackerPenalty';
 
-// Track which penalties each user has claimed
-const claimedPenaltiesByUser: Record<string, Set<number>> = {};
+// Returns the set of penalty IDs already claimed by a given address (from DB)
+async function getClaimedPenaltyIds(claimer: string): Promise<Set<number>> {
+  const claimRepo = AppDataSource.getRepository(RewardClaim);
+  const claims = await claimRepo.find({ where: { claimer } });
+  const ids = new Set<number>();
+  for (const claim of claims) {
+    if (claim.penaltyIds) {
+      claim.penaltyIds.split(',').forEach(s => {
+        const n = parseInt(s, 10);
+        if (!isNaN(n)) ids.add(n);
+      });
+    }
+  }
+  return ids;
+}
 
 // Reward split from penalties
 const ATTACKER_PENALTY_AMOUNT = ethers.parseEther('0.05');
@@ -35,12 +47,10 @@ export const getPendingRewards = async (req: Request, res: Response) => {
     console.log(`[getPendingRewards] Found ${allPenalties.length} total penalties in DB`);
     
     const userAddressLower = address.toLowerCase();
-    if (!claimedPenaltiesByUser[userAddressLower]) {
-      claimedPenaltiesByUser[userAddressLower] = new Set();
-    }
-    
+    const claimedIds = await getClaimedPenaltyIds(userAddressLower);
+
     // Get penalties this user hasn't claimed yet
-    const unclaimedPenalties = allPenalties.filter(p => !claimedPenaltiesByUser[userAddressLower].has(p.id));
+    const unclaimedPenalties = allPenalties.filter(p => !claimedIds.has(p.id));
     
     // User earns 30% of each unclaimed penalty
     const pendingRewards = userSharePerPenalty * BigInt(unclaimedPenalties.length);
@@ -55,7 +65,7 @@ export const getPendingRewards = async (req: Request, res: Response) => {
       totalUserShare: totalUserShare.toString(),
       totalUserShareEth: ethers.formatEther(totalUserShare),
       unclaimedCount: unclaimedPenalties.length,
-      claimedCount: claimedPenaltiesByUser[userAddressLower].size,
+      claimedCount: claimedIds.size,
       perPenalty: {
         total: ATTACKER_PENALTY_AMOUNT.toString(),
         user: userSharePerPenalty.toString(),
@@ -87,13 +97,12 @@ export const claimRewards = async (req: Request, res: Response) => {
     
     const claimerLower = claimer.toLowerCase();
     console.log('[claimRewards] Claimer (lowercase):', claimerLower);
-    if (!claimedPenaltiesByUser[claimerLower]) {
-      claimedPenaltiesByUser[claimerLower] = new Set();
-    }
-    
+
+    const claimedIds = await getClaimedPenaltyIds(claimerLower);
+
     // Get unclaimed penalties for this user
-    const unclaimedPenalties = allPenalties.filter(p => !claimedPenaltiesByUser[claimerLower].has(p.id));
-    
+    const unclaimedPenalties = allPenalties.filter(p => !claimedIds.has(p.id));
+
     if (unclaimedPenalties.length === 0) {
       return res.status(400).json({ error: 'No unclaimed rewards available.' });
     }
@@ -101,24 +110,26 @@ export const claimRewards = async (req: Request, res: Response) => {
     // User gets 30% of unclaimed penalties
     const userShare = userSharePerPenalty * BigInt(unclaimedPenalties.length);
     const amountWei = userShare.toString();
+    const penaltyIds = unclaimedPenalties.map(p => p.id).join(',');
 
-    const mockTxHash = '0x' + Math.random().toString(16).slice(2).padEnd(64, '0');
+    // Deterministic receipt hash: keccak256(claimer + timestamp)
+    const txHash = ethers.keccak256(
+      ethers.AbiCoder.defaultAbiCoder().encode(
+        ['address', 'uint256'],
+        [claimerLower, BigInt(Date.now())]
+      )
+    );
+
     console.log(`[claimRewards] User ${claimerLower} claiming ${ethers.formatEther(userShare)} ETH for ${unclaimedPenalties.length} penalties`);
-    
-    // Simulate claim delay
-    await new Promise(r => setTimeout(r, 2000));
 
-    const claim = claimRepo.create({ claimer: claimerLower, txHash: mockTxHash, amountWei });
+    const claim = claimRepo.create({ claimer: claimerLower, txHash, amountWei, penaltyIds });
     console.log('[claimRewards] Saving claim with claimer:', claimerLower);
     const savedClaim = await claimRepo.save(claim);
     console.log('[claimRewards] Saved claim:', savedClaim);
-    
-    // Mark these penalties as claimed by this user
-    unclaimedPenalties.forEach(p => claimedPenaltiesByUser[claimerLower].add(p.id));
 
-    res.json({ 
-      txHash: mockTxHash, 
-      status: 'claimed', 
+    res.json({
+      txHash,
+      status: 'claimed',
       receiptStatus: 1, 
       amountWei, 
       amountEth: ethers.formatEther(userShare),

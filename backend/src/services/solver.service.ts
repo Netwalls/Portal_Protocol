@@ -24,22 +24,31 @@ export const solverService = {
 
     const { revealed } = payload || {};
 
-    // Simulate attacker penalty: EVERY settlement catches an attacker (for demo)
-    const mockAttackerAddress = '0x' + Math.floor(Math.random() * 1000000).toString(16).padStart(40, '0');
-    const penaltyRepo = AppDataSource.getRepository(AttackerPenalty);
-    const penalty = penaltyRepo.create({
-      attacker: mockAttackerAddress,
-      intentHash,
-      penaltyWei: ATTACKER_PENALTY.toString()
-    });
-    await penaltyRepo.save(penalty);
-    console.log(`✅ [settle] ATTACKER CAUGHT! Address: ${mockAttackerAddress}`);
-    console.log(`💰 [settle] Penalty: ${ethers.formatEther(ATTACKER_PENALTY)} ETH`);
-    console.log(`📊 [settle] Reward split: User 30% = ${ethers.formatEther((ATTACKER_PENALTY * 30n) / 100n)} ETH`);
-    const hasAttacker = true;
+    // Simulate attacker penalty: ~40% chance of catching a frontrunner (realistic demo)
+    const hasAttacker = Math.random() < 0.4;
+    let mockAttackerAddress = ethers.ZeroAddress;
+    if (hasAttacker) {
+      mockAttackerAddress = ethers.Wallet.createRandom().address;
+      const penaltyRepo = AppDataSource.getRepository(AttackerPenalty);
+      const penalty = penaltyRepo.create({
+        attacker: mockAttackerAddress,
+        intentHash,
+        penaltyWei: ATTACKER_PENALTY.toString()
+      });
+      await penaltyRepo.save(penalty);
+      console.log(`🚨 [settle] ATTACKER CAUGHT! Address: ${mockAttackerAddress}`);
+      console.log(`💰 [settle] Penalty: ${ethers.formatEther(ATTACKER_PENALTY)} ETH`);
+    } else {
+      console.log(`✅ [settle] Clean settlement — no frontrun detected`);
+    }
 
-    // Generate realistic tx hash
-    const mockTxHash = '0x' + Math.random().toString(16).slice(2).padEnd(64, '0');
+    // Generate settlement tx hash
+    const mockTxHash = ethers.keccak256(
+      ethers.AbiCoder.defaultAbiCoder().encode(
+        ['bytes32', 'address', 'uint256'],
+        [intentHash, mockAttackerAddress, BigInt(Date.now())]
+      )
+    );
     console.log('[settle] Settlement tx:', mockTxHash);
 
     // Calculate MEV (10% of input as captured MEV)

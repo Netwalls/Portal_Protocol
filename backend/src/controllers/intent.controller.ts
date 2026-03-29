@@ -121,6 +121,21 @@ export const getAllIntents = async (req: Request, res: Response) => {
   }
 };
 
+// Called by frontend after a wallet-signed commitIntent tx — just persists to DB
+export const recordIntent = async (req: Request, res: Response) => {
+  const { intentHash, user, txHash } = req.body;
+  if (!intentHash || !user) return res.status(400).json({ error: 'intentHash and user required' });
+  try {
+    const existing = await repo.findOneBy({ intentHash });
+    if (existing) return res.json(existing);
+    const i = repo.create({ intentHash, user: user.toLowerCase(), status: 'Open', txHash, commitTime: Math.floor(Date.now() / 1000) });
+    await repo.save(i);
+    res.json({ intentHash, status: 'recorded' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 export const decryptIntent = async (req: Request, res: Response) => {
   const { intentHash } = req.params;
   try {
