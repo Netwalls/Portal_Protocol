@@ -174,23 +174,5 @@ export const contractService = {
   }
 };
 
-// Listen for events and persist to DB. This module is imported after DB init in src/index.ts
-portal.on('IntentCommitted', async (intentHash: string, user: string, _intentType: any, _destChainId: any, _deadline: any) => {
-  try {
-    console.log(`[EVENT] IntentCommitted ${intentHash} by ${user}`);
-    const exists = await Intent.findOne({ intentHash: intentHash.toString() });
-    if (exists) return;
-    await Intent.create({ intentHash: intentHash.toString(), user: user.toString().toLowerCase(), status: 'Open', commitTime: Math.floor(Date.now() / 1000) });
-  } catch (err) {
-    console.error('Error handling IntentCommitted event', err);
-  }
-});
-
-portal.on('IntentSettled', async (intentHash: string) => {
-  try {
-    console.log(`[EVENT] IntentSettled ${intentHash}`);
-    await Intent.updateOne({ intentHash: intentHash.toString() }, { status: 'Settled' });
-  } catch (err) {
-    console.error('Error handling IntentSettled event', err);
-  }
-});
+// Event listeners disabled — Base Sepolia public RPC drops eth_getFilterChanges quickly.
+// Intents are persisted via POST /api/intent/record called directly by the frontend after signing.
