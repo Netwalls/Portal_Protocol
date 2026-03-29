@@ -5,9 +5,10 @@ import path from 'path';
 // Looks in env override first, then project-root relative path. This avoids resolving to
 // backend/portal_hook (which does not exist in the mono-repo).
 const envArtifactPath = process.env.PORTAL_ABI_PATH;
+const bundledAbiPath = path.join(__dirname, 'PortalHook.json'); // committed alongside this file
 const projectRoot = path.resolve(__dirname, '../../..');
 const defaultArtifactPath = path.join(projectRoot, 'portal_hook/out/PortalHook.sol/PortalHook.json');
-const candidatePaths = [envArtifactPath, defaultArtifactPath].filter(Boolean) as string[];
+const candidatePaths = [envArtifactPath, bundledAbiPath, defaultArtifactPath].filter(Boolean) as string[];
 
 let portalABI: any[] = [];
 let loadedFrom: string | null = null;
