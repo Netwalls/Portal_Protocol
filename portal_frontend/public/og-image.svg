@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#0a0a0f"/>
+  <!-- Background grid lines -->
+  <line x1="0" y1="315" x2="1200" y2="315" stroke="#1e1e2e" stroke-width="1"/>
+  <line x1="600" y1="0" x2="600" y2="630" stroke="#1e1e2e" stroke-width="1"/>
+  <!-- Glow circle -->
+  <circle cx="600" cy="315" r="220" fill="#6366f1" opacity="0.05"/>
+  <circle cx="600" cy="315" r="160" fill="#6366f1" opacity="0.07"/>
+  <!-- Logo -->
+  <circle cx="600" cy="230" r="90" stroke="#6366f1" stroke-width="3" opacity="0.5"/>
+  <circle cx="600" cy="230" r="60" stroke="#6366f1" stroke-width="2" opacity="0.7"/>
+  <path d="M 528 230 A 72 72 0 0 1 672 230" stroke="#818cf8" stroke-width="6" stroke-linecap="round"/>
+  <path d="M 528 230 A 72 72 0 0 0 672 230" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+  <path d="M600 178 L626 191 L626 219 C626 238 614 255 600 263 C586 255 574 238 574 219 L574 191 Z" fill="#6366f1" opacity="0.9"/>
+  <circle cx="600" cy="216" r="9" fill="#0a0a0f"/>
+  <rect x="596" y="221" width="8" height="12" rx="2" fill="#0a0a0f"/>
+  <circle cx="528" cy="230" r="6" fill="#818cf8"/>
+  <circle cx="672" cy="230" r="6" fill="#818cf8"/>
+  <!-- Text -->
+  <text x="600" y="370" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="700" fill="#f1f5f9" text-anchor="middle" letter-spacing="-2">PORTAL</text>
+  <text x="600" y="415" font-family="system-ui, -apple-system, sans-serif" font-size="26" fill="#6366f1" text-anchor="middle" letter-spacing="8">PROTOCOL</text>
+  <text x="600" y="480" font-family="system-ui, -apple-system, sans-serif" font-size="22" fill="#94a3b8" text-anchor="middle">MEV-resistant intents · Fhenix FHE · EigenLayer AVS</text>
+  <!-- Corner badges -->
+  <rect x="40" y="40" width="160" height="36" rx="8" fill="#1e1e2e" stroke="#6366f1" stroke-width="1" opacity="0.8"/>
+  <text x="120" y="63" font-family="system-ui" font-size="14" fill="#818cf8" text-anchor="middle">Base Sepolia</text>
+  <rect x="1000" y="40" width="160" height="36" rx="8" fill="#1e1e2e" stroke="#6366f1" stroke-width="1" opacity="0.8"/>
+  <text x="1080" y="63" font-family="system-ui" font-size="14" fill="#818cf8" text-anchor="middle">Wave 1 · 2026</text>
+</svg>

@@ -167,8 +167,8 @@ export default function Layout(): JSX.Element {
       <div className="flex min-h-screen">
         <aside className="hidden lg:flex w-72 flex-col border-r border-neutral-800/80 bg-neutral-950/80 ring-1 ring-white/5 px-0">
           <div className="px-6 py-5 flex items-center gap-3">
-            <div className="h-9 w-9 rounded-md bg-gradient-to-br from-neutral-900 to-neutral-800 border border-neutral-800 flex items-center justify-center shadow-sm shadow-black/20">
-              <span className="text-neutral-200 font-semibold tracking-tight text-lg">P</span>
+            <div className="h-9 w-9 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center shadow-sm shadow-black/20 p-1">
+              <img src="/logo.svg" alt="Portal Logo" className="h-full w-full" />
             </div>
             <div className="flex flex-col">
               <span className="text-neutral-100 font-semibold tracking-tight text-[18px]">PORTAL</span>
@@ -192,8 +192,8 @@ export default function Layout(): JSX.Element {
         <main className="flex-1 flex flex-col">
           <header className="flex items-center justify-between gap-3 px-4 lg:px-6 py-4 border-b border-neutral-800/80 bg-neutral-950/60 backdrop-blur">
             <div className="flex items-center gap-2 lg:hidden">
-              <div className="h-8 w-8 rounded-md bg-gradient-to-br from-neutral-900 to-neutral-800 border border-neutral-800 flex items-center justify-center shadow-sm shadow-black/20">
-                <span className="text-neutral-200 font-semibold tracking-tight text-base">P</span>
+              <div className="h-8 w-8 rounded-md bg-neutral-900 border border-neutral-800 flex items-center justify-center shadow-sm shadow-black/20 p-1">
+                <img src="/logo.svg" alt="Portal Logo" className="h-full w-full" />
               </div>
               <span className="text-neutral-200 font-semibold tracking-tight text-[17px]">PORTAL</span>
             </div>
